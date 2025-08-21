@@ -1,0 +1,55 @@
+{
+  "name": "@mavenoutline/otp-input-mui",
+  "version": "1.0.0",
+  "description": "Accessible OTP / PIN input component for React/Next.js using MUI, with resend timer, paste handling, a11y, and edge cases covered.",
+  "keywords": [
+    "otp",
+    "mui",
+    "material-ui",
+    "pin",
+    "react",
+    "nextjs",
+    "component",
+    "input",
+    "one-time-password"
+  ],
+  "author": "MavenOutline",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mavenoutline/otp-input-mui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mavenoutline/otp-input-mui/issues"
+  },
+  "homepage": "https://github.com/mavenoutline/otp-input-mui",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "peerDependencies": {
+    "@mui/material": "^5.15.0 || ^6.0.0",
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "tsup": "^8.2.4"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --minify",
+    "dev": "tsup src/index.ts --format esm --watch --dts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  }
+}
