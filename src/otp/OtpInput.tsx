@@ -273,11 +273,13 @@ export const OtpInput = React.forwardRef<OtpInputRef, OtpInputProps>(function Ot
               color={color}
               error={error}
               disabled={disabled}
-              inputRef={(el) => (inputs.current[i] = el)}
+              inputRef={(el: HTMLInputElement | null) => {
+                inputs.current[i] = el;
+              }}
               value={ch}
-              onChange={(e) => onInput(i, e)}
-              onKeyDown={(e) => onKeyDown(i, e)}
-              onPaste={(e) => handlePaste(i, e)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInput(i, e)}
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => onKeyDown(i, e)}
+              onPaste={(e: React.ClipboardEvent<HTMLInputElement>) => handlePaste(i, e)}
               inputProps={{
                 inputMode: detectInputMode,
                 pattern: type === "number" ? "[0-9]*" : undefined,
