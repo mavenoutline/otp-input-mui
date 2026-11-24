@@ -1,3 +1,13 @@
-
-export { OtpInput } from "./otp/OtpInput";
-export type { OtpInputProps, OtpInputRef } from "./otp/types";
+export { OtpInput, otpInputClasses } from "./otp/OtpInput";
+export { useResendTimer } from "./otp/useResendTimer";
+export { defaultFormatSeconds, normalizeDigit } from "./otp/utils";
+export type {
+  OtpInputProps,
+  OtpInputRef,
+  OtpInputType,
+  OtpTransform,
+  ResendConfig,
+  ResendRenderState,
+  ResendTimerOptions,
+  ResendTimerState,
+} from "./otp/types";

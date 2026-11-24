@@ -1,132 +1,266 @@
-
 # @mavenoutline/otp-input-mui
 
-Accessible, production-ready OTP / PIN input for React & Next.js built with **MUI**.  
-Supports paste, auto-advance, backspace, **resend with timer**, SSR safety, a11y, IME, and mobile one-time-code autofill.
+Accessible OTP / PIN / verification-code input for React and Next.js, built on **MUI**.
 
-## Features
-- MUI-themed inputs (`variant`, `size`, `color`, `error`, `helperText` support).
-- Controlled & uncontrolled usage.
-- Paste full OTP (handles spaces, hyphens, unicode digits).
-- Auto focus next / previous on type & backspace.
-- Masked display (e.g., •) with optional reveal on focus.
-- Mobile & iOS SMS autofill (`autoComplete="one-time-code"`).
-- Resend button with customizable timer, formatting, and callbacks.
-- `onComplete` fires when all slots are filled.
-- RTL-aware and accessible (labels, descriptions, roles).
-- Imperative API via `ref`: `focus`, `blur`, `clear`, `setValue`.
-- Fully typed, tree-shakeable, ESM & CJS builds via `tsup`.
+- Paste a full code anywhere (`123 456`, `123-456`, `G-123456`) and it distributes across the cells
+- iOS / Android SMS **one-time-code autofill**
+- Numeric, alphanumeric or free-text codes, with optional upper/lower-casing
+- Real masking (`•` or any character) with optional reveal-on-focus
+- Built-in **resend button + countdown**, or a headless `useResendTimer` hook for your own UI
+- Works with native `<form>`s, Next.js Server Actions and React Hook Form
+- Keyboard support: arrows (RTL-aware), Backspace, Delete, Home/End
+- Screen-reader friendly: labelled group, per-cell labels, linked helper text
+- Ships `"use client"`, so it drops straight into the Next.js App Router
 
 ## Install
+
 ```bash
-npm i @mavenoutline/otp-input-mui
-# peer deps
-npm i @mui/material @emotion/react @emotion/styled
+npm i @mavenoutline/otp-input-mui @mui/material @emotion/react @emotion/styled
 ```
 
+Supports React 18/19 and MUI 6/7.
+
 ## Quick start
+
 ```tsx
+import { useState } from "react";
 import { OtpInput } from "@mavenoutline/otp-input-mui";
 
-export default function Example() {
+export function VerifyPhone() {
   const [code, setCode] = useState("");
   return (
     <OtpInput
-      length={6}
+      label="Enter the 6-digit code we sent to your phone"
       value={code}
       onChange={setCode}
-      onComplete={(otp) => console.log("complete:", otp)}
-      label="Enter verification code"
-      resend={{
-        seconds: 30,
-        onResend: () => console.log("Resend clicked"),
-      }}
-      variant="outlined"
-      size="medium"
-      error={false}
-      helperText="We sent it via SMS"
+      onComplete={(otp) => verify(otp)}
+      autoFocus
     />
   );
 }
 ```
 
-## Props
-```ts
-type OtpInputProps = {
-  length?: number; // default 6
-  value?: string;              // controlled
-  defaultValue?: string;       // uncontrolled
-  onChange?: (value: string) => void;
-  onComplete?: (value: string) => void;
-  onInvalidChar?: (char: string) => void;
+## Recipes
 
-  // Input behavior
-  type?: "number" | "text"; // default "number"
-  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
-  allowedChars?: RegExp; // default: digits when type="number", otherwise /./
-  mask?: string | false; // e.g., "•" to mask, false to show raw characters
-  revealOnFocus?: boolean; // default: false
+### Verify, show an error, and let the user retry
 
-  // MUI
-  variant?: "outlined" | "filled" | "standard";
-  size?: "small" | "medium";
-  color?: "primary" | "secondary" | "error" | "info" | "success" | "warning";
-  error?: boolean;
-  disabled?: boolean;
-  fullWidth?: boolean;
-  label?: React.ReactNode;
-  helperText?: React.ReactNode;
-  TextFieldProps?: Partial<import("@mui/material").TextFieldProps>;
+`onComplete` fires each time user input fills the code, so it is safe to call your API directly.
 
-  // Layout
-  gap?: number | string;      // spacing between cells
-  renderSeparator?: React.ReactNode; // element between cells (e.g., <Box sx={{mx:1}}>-</Box>)
-
-  // Resend
-  resend?: {
-    seconds?: number; // default 30
-    autoStart?: boolean; // default true
-    onResend?: () => void | Promise<void>;
-    format?: (remaining: number) => string; // default mm:ss
-    label?: React.ReactNode; // "Resend"
-    disabled?: boolean;
-    maxAttempts?: number; // default Infinity
-    attemptsStorageKey?: string; // to persist attempts across reloads
-  };
-
-  // A11y
-  id?: string;
-  name?: string;
-  "aria-describedby"?: string;
-
-  // Imperative API
-  ref?: React.Ref<OtpInputRef>;
-};
-
-export type OtpInputRef = {
-  focus: (index?: number) => void;
-  blur: () => void;
-  clear: () => void;
-  setValue: (value: string) => void;
-  getValue: () => string;
-};
-```
-
-## Resend timer text
-The timer format can be customized:
 ```tsx
-resend={{ seconds: 45, format: (s) => `Time remaining: ${s}s` }}
+const ref = useRef<OtpInputRef>(null);
+const [error, setError] = useState<string | null>(null);
+const [loading, setLoading] = useState(false);
+
+<OtpInput
+  ref={ref}
+  disabled={loading}
+  error={!!error}
+  helperText={error ?? "Check your SMS inbox"}
+  onChange={() => setError(null)}
+  onComplete={async (otp) => {
+    setLoading(true);
+    const ok = await api.verify(otp);
+    setLoading(false);
+    if (!ok) {
+      setError("That code is incorrect");
+      ref.current?.clear(); // empties the cells and refocuses the first one
+    }
+  }}
+/>;
 ```
 
-## Paste handling
-Users can paste the entire code (e.g., `123 456` or `123-456`). Non-allowed characters are ignored.
+### Resend with countdown and attempt limit
 
-## Next.js (SSR) notes
-- Component is SSR-safe. Focus logic and `window` usage are guarded.
-- For App Router (`app/`), include `"use client"` at the top of your page or component file where you render `<OtpInput />`.
+```tsx
+<OtpInput
+  resend={{
+    seconds: 60,
+    maxAttempts: 3,
+    storageKey: "signup-otp", // survives page reloads (sessionStorage by default)
+    onResend: () => api.sendCode(phone), // if this rejects, the attempt is not counted
+  }}
+/>
+```
+
+After a successful resend the cells are cleared and refocused (`clearOnResend: false` turns that off).
+Text is customizable through `label`, `exhaustedText` and `format`:
+
+```tsx
+resend={{ label: "Send again", format: (s) => `in ${s}s`, exhaustedText: "Please contact support" }}
+```
+
+### Custom resend UI
+
+Use `resend.render` to keep the built-in timer logic but draw your own UI:
+
+```tsx
+<OtpInput
+  resend={{
+    onResend: sendCode,
+    render: ({ canResend, formatted, loading, resend }) =>
+      canResend ? (
+        <Link component="button" onClick={resend}>{loading ? "Sending…" : "Didn't get it? Resend"}</Link>
+      ) : (
+        <Typography variant="caption">Resend available in {formatted}</Typography>
+      ),
+  }}
+/>
+```
+
+Or use the hook directly, anywhere in your page:
+
+```tsx
+import { useResendTimer } from "@mavenoutline/otp-input-mui";
+
+const { remaining, canResend, resend, attemptsLeft } = useResendTimer({ seconds: 30, onResend: sendCode });
+```
+
+### PIN entry (masked)
+
+```tsx
+<OtpInput length={4} mask revealOnFocus label="Enter your PIN" />
+<OtpInput length={6} mask="*" />
+```
+
+### Alphanumeric / backup codes with a separator
+
+```tsx
+<OtpInput
+  length={8}
+  type="alphanumeric"
+  transform="uppercase"
+  renderSeparator={(i) => (i === 3 ? "–" : null)} // ABCD–EFGH
+/>
+```
+
+`allowedChars` lets you go further, e.g. hex only: `allowedChars={/^[A-F0-9]$/}` with `transform="uppercase"`.
+
+### Native forms and Next.js Server Actions
+
+Set `name` and the full code is submitted through a hidden input:
+
+```tsx
+// app/verify/page.tsx (a Server Component)
+import { OtpInput } from "@mavenoutline/otp-input-mui";
+
+export default function Page() {
+  async function verify(formData: FormData) {
+    "use server";
+    const code = formData.get("otp"); // "123456"
+  }
+  return (
+    <form action={verify}>
+      <OtpInput name="otp" autoFocus />
+      <button type="submit">Verify</button>
+    </form>
+  );
+}
+```
+
+### React Hook Form
+
+```tsx
+<Controller
+  name="otp"
+  control={control}
+  rules={{ minLength: 6, required: true }}
+  render={({ field, fieldState }) => (
+    <OtpInput
+      ref={field.ref}
+      value={field.value ?? ""}
+      onChange={field.onChange}
+      onBlur={field.onBlur}
+      error={!!fieldState.error}
+      helperText={fieldState.error ? "Enter all 6 digits" : undefined}
+    />
+  )}
+/>
+```
+
+### Full-width layout
+
+```tsx
+<OtpInput fullWidth gap={8} size="small" />
+```
+
+## API
+
+### Props
+
+| Prop | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `length` | `number` | `6` | Number of cells |
+| `value` / `defaultValue` | `string` | | Controlled / uncontrolled value |
+| `onChange` | `(value) => void` | | |
+| `onComplete` | `(value) => void` | | Fires each time user input fills the code |
+| `onInvalidChar` | `(char) => void` | | A rejected keystroke or paste |
+| `type` | `"number" \| "alphanumeric" \| "text"` | `"number"` | Character preset and mobile keyboard |
+| `allowedChars` | `RegExp` | | Single-character test that overrides `type` |
+| `transform` | `"uppercase" \| "lowercase"` | | |
+| `inputMode` | HTML `inputMode` | from `type` | |
+| `mask` | `boolean \| string` | `false` | `true` uses `•` |
+| `revealOnFocus` | `boolean` | `false` | Show the real characters while focused |
+| `selectOnFocus` | `boolean` | `true` | Typing into a filled cell replaces it |
+| `variant` / `size` / `color` | MUI values | `outlined` / `medium` / `primary` | |
+| `error` / `disabled` / `readOnly` | `boolean` | `false` | |
+| `fullWidth` | `boolean` | `false` | Cells stretch to fill the row |
+| `label` / `helperText` | `ReactNode` | | Linked to the group for screen readers |
+| `placeholder` | `string` | | Per-cell placeholder, e.g. `"○"` |
+| `autoFocus` | `boolean` | `false` | Focuses the first empty cell |
+| `gap` | `number \| string` | `10px` | Space between cells |
+| `renderSeparator` | `ReactNode \| (index) => ReactNode` | | Between cells |
+| `resend` | `ResendConfig` | | See below |
+| `name` | `string` | | Hidden input for form submission |
+| `id` | `string` | auto | Cells get `${id}-${index}` |
+| `getCellAriaLabel` | `(index, length) => string` | `"Digit 1 of 6"` | Localize screen-reader labels |
+| `TextFieldProps` | `Partial<TextFieldProps>` | | Forwarded to every cell |
+| `sx` / `cellSx` | `SxProps` | | Root / each cell |
+| any other prop | | | Forwarded to the root `<div>` (`data-*`, `onBlur`, …) |
+
+### `resend` (`ResendConfig`)
+
+| Key | Type | Default |
+| --- | --- | --- |
+| `seconds` | `number` | `30` |
+| `autoStart` | `boolean` | `true` (the first code was just sent) |
+| `onResend` | `() => void \| Promise` | |
+| `maxAttempts` | `number` | `Infinity` |
+| `storageKey` | `string` | |
+| `storage` | `"session" \| "local"` | `"session"` |
+| `clearOnResend` | `boolean` | `true` |
+| `label` | `ReactNode` | `"Resend code"` |
+| `exhaustedText` | `ReactNode` | `"No more resends available"` |
+| `format` | `(seconds) => string` | `m:ss` |
+| `disabled` | `boolean` | |
+| `render` | `(state) => ReactNode` | |
+
+### Ref (`OtpInputRef`)
+
+| Method | |
+| --- | --- |
+| `focus(index?)` | Focus a cell (defaults to the first empty one) |
+| `blur()` | |
+| `clear()` | Empty the value and focus the first cell |
+| `setValue(value)` | Sanitized; fires `onChange` / `onComplete` |
+| `getValue()` | |
+| `startResendTimer()` | Restart the countdown without calling `onResend` |
+| `resetResend()` | Reset attempts, countdown and stored state |
 
 ## Theming
-Uses your MUI theme. Customize via `sx` or theme overrides using the class name `MuiOtpInput-root` and `MuiOtpInput-cell`.
+
+Every part has a stable class name, exported as `otpInputClasses`:
+`MuiOtpInput-root`, `-label`, `-cells`, `-cell`, `-separator`, `-footer`, `-helperText`, `-resend`.
+
+```tsx
+<OtpInput sx={{ [`& .${otpInputClasses.cell} input`]: { fontWeight: 700 } }} />
+```
+
+## Behaviour notes
+
+- The code is always contiguous. Clicking a cell past the first empty one moves focus back to the first empty cell, and deleting a middle character shifts the rest left.
+- Unicode digits (Arabic-Indic, Persian, Devanagari, Bengali, Thai, fullwidth) are converted to ASCII.
+- Enter is not intercepted, so it submits the surrounding form.
 
 ## License
-MIT © mavenoutline
+
+MIT © MavenOutline

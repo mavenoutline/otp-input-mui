@@ -5,16 +5,18 @@ Thanks for helping improve **@mavenoutline/otp-input-mui**!
 
 ## Setup
 ```bash
-pnpm i # or npm i / yarn
-pnpm dev
+npm i
+npm run dev
 ```
 
 ## Commands
-- `pnpm dev` — watch build with tsup
-- `pnpm build` — production build (esm + cjs + dts)
-- `pnpm typecheck` — TypeScript checks
+- `npm run dev`: watch build with tsup
+- `npm run build`: production build (ESM + CJS + type declarations, keeps `"use client"`)
+- `npm run typecheck`: TypeScript checks
+- `npm test`: Vitest + Testing Library (jsdom)
 
 ## Development notes
 - Keep the component SSR-safe (no unguarded window/document).
 - Avoid breaking public API without a major version bump.
-- Write small, focused PRs with tests if possible.
+- Add a test in `test/` for every behaviour change.
+- Record user-facing changes in `CHANGELOG.md`.

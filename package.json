@@ -1,7 +1,7 @@
 {
   "name": "@mavenoutline/otp-input-mui",
-  "version": "1.0.0",
-  "description": "Accessible OTP / PIN input component for React/Next.js using MUI, with resend timer, paste handling, a11y, and edge cases covered.",
+  "version": "2.0.0",
+  "description": "Accessible OTP / PIN / verification-code input for React & Next.js built on MUI: paste & SMS autofill, masking, resend timer, form support.",
   "keywords": [
     "otp",
     "mui",
@@ -11,7 +11,13 @@
     "nextjs",
     "component",
     "input",
-    "one-time-password"
+    "one-time-password",
+    "verification-code",
+    "2fa",
+    "mfa",
+    "otp-input",
+    "pin-input",
+    "resend-timer"
   ],
   "author": "MavenOutline",
   "license": "MIT",
@@ -30,13 +36,21 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@mui/material": "^7.0.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^6.0.0 || ^7.0.0",
     "@types/react": "^18.0.0 || ^19.0.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
@@ -47,12 +61,36 @@
     "typescript": "^5.6.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "tsup": "^8.2.4"
+    "tsup": "^8.2.4",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.3.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/dom": "^10.4.0",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --minify",
-    "dev": "tsup src/index.ts --format esm --watch --dts",
+    "build": "tsup",
+    "dev": "tsup --watch --no-minify",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
